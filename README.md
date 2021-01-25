@@ -10,9 +10,9 @@ databases whose data is usually complete and durable but costly in terms of perf
 Caching is implemented in two separate ways in this Mule 4 example:
 
  - Redis is configured as a custom object store
- -- `./src/main/mule/caching-scope-example-impl.xml`
+ 	- `./src/main/mule/caching-scope-example-impl.xml`
  - Redis is used outright as global cache
- -- `./src/main/mule/caching-scope-example-redis-impl.xml`
+ 	- `./src/main/mule/caching-scope-example-redis-impl.xml`
 
 By configuring a custom object store to use Redis, each flow can use the normal object store scopes and connectors 
 provided Anypoint Studio's Mule Palette. This implementation is preferable when moving from object store implementations since 
@@ -29,7 +29,7 @@ used Memcached and Apache Cassandra for global caching. Cloudhub customers may a
 ### What is required to run the example?
 
  - Access to a Redis instance (either installed locally or managed locally).
- -- Redis connectivity properties are stored in `./src/main/resources/example-properties.yaml`
+ 	- Redis connectivity properties are stored in `./src/main/resources/example-properties.yaml`
  - Anypoint Studio v7.4.2+
 
 ### What is included in the example?
@@ -60,7 +60,7 @@ For leveraging Redis directly as a global cache, use the following flows:
 - `DEL-remove-cache-value-redisFlow` for removing a cache value.
 - `DEL-invalidate-cache-redisFlow` for invalidating the entire cache (currently not supported by the Redis connector).
 
-#### For how long should I cache my values?
+### For how long should I cache my values?
 
 In caching, this is always the central question and unfortunately the answer is _it depends_.
 
