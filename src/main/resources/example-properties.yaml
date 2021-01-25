@@ -1,0 +1,5 @@
+# Redis Instance
+redis.host: localhost
+redis.port: "6379"
+redis.connection.timeout: "2000"
+redis.entryTTL: "60000"

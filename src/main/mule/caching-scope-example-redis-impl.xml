@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:redis="http://www.mulesoft.org/schema/mule/redis"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+	http://www.mulesoft.org/schema/mule/ee/core
+	http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+	http://www.mulesoft.org/schema/mule/core
+	http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	http://www.mulesoft.org/schema/mule/redis
+	http://www.mulesoft.org/schema/mule/redis/current/mule-redis.xsd
+	http://www.mulesoft.org/schema/mule/os
+	http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+	http://www.mulesoft.org/schema/mule/http
+	http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<redis:redis-config name="Redis_Cache" doc:name="Redis Redis" doc:id="bf243d30-46da-4af7-8ba8-673946cf6ecd" >
+		<redis:nonclustered-connection host="${redis.host}" port="${redis.port}" connectionTimeout="${redis.connection.timeout}" entryTTL="${redis.entryTTL}"/>
+	</redis:redis-config>
+	<flow name="GET-reservation-flightPlan-redisFlow" doc:id="01994cef-01a9-4e56-90b8-e963a6790b28" >
+		<flow-ref doc:name="Check Cache for FlightPlan" doc:id="676a5f9d-2c57-4547-bf1d-39474b8c71d7" name="check-redisSub_Flow"/>
+		<choice doc:name="Was it cached?" doc:id="97bf86b2-3d86-4e4b-b35c-8b159443a6f2" >
+			<when expression="#[(isEmpty(payload))]">
+				<flow-ref doc:name="Lookup FlightPlan" doc:id="6a59026e-244d-4452-a41c-59e6d4c4d70d" name="lookup-reservation-flightPlanSub_Flow" />
+				<flow-ref doc:name="Cache FlightPlan" doc:id="3f272143-eee7-48c9-8e4c-5c737e866f47" name="store-in-redisSub_Flow" />
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Log FlightPlan was Cached" doc:id="7bb498b2-0640-4a66-bf7e-ef6363198e81" message='#["Flight Plan for Reservation: " ++ vars.reservationID ++ " was cached."]' />
+				<ee:transform doc:name="Read Results" doc:id="987a1507-07e4-4992-8955-f7c2368a6bb1" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+read(payload)]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Construct 'Successful' Response" doc:id="6a998815-625f-4463-bba3-ecf4e742f9bf" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  apiStatus: {
+    name: "Passenger Reservations System API",
+    status: "OK",
+    statusCode: "200",
+    description: "Flights successfully retrieved.",
+    transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+    timestamp: 1568052807372
+  },
+  flights: payload
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<sub-flow name="check-redisSub_Flow" doc:id="4698e142-6b7a-440c-ad17-73448ffdd251" >
+		<logger level="INFO" doc:name="Before Checking Cache" doc:id="d6799c98-69ea-4001-8d66-e28d71b84901" message='#["Before Checking Redis cache for " ++ vars.reservationID ++ "..."]'/>
+		<redis:get doc:name="Check Redis for FlightPlan" doc:id="270fface-7319-45fb-a16a-d2aa4500d70b" key="#[vars.reservationID]" config-ref="Redis_Cache"/>
+		<logger level="INFO" doc:name="After Checking Cache" doc:id="d008f1d9-a1b7-4145-b86b-f4854d85d7c9" message='#["...After Checking Redis cache for " ++ vars.reservationID ++ "."]'/>
+	</sub-flow>
+	<sub-flow name="store-in-redisSub_Flow" doc:id="2f7c744b-d66b-4c3f-8d15-afd3e2c24c37" >
+		<logger level="INFO" doc:name="Before Caching" doc:id="218248ba-b561-45cd-b6d1-3bb941f6d358" message='#["Before storing in Redis cache...."]'/>
+		<ee:transform doc:name="Write Results" doc:id="5473237f-50ff-49df-9764-46634ed44539" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+write(payload)]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="flightPlan" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<redis:set doc:name="Cache FlightPlan" doc:id="3d4ed675-eec9-4383-b814-8d94f0f38e17" key="#[vars.reservationID]" config-ref="Redis_Cache">
+		</redis:set>
+		<ee:transform doc:name="Reset Results" doc:id="fc99f7fe-88d5-438d-ae56-6923000b1328">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+vars.flightPlan]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="After Caching" doc:id="810123d5-f83b-4312-9c24-889457883f02" message='#["... After storing in Redis cache."]'/>
+	</sub-flow>
+	<flow name="PUT-reservation-flightPlan-redisFlow" doc:id="445fcfc2-5512-4212-bbac-1d9f4f6cd86f" >
+		<logger level="INFO" doc:name="Before Updating FlightPlan" doc:id="f8356a13-5b3f-4261-96c7-d61d8b269b0f" message='#["Before Updating FlightPlan (" ++ vars.reservationID ++ ")..."]'/>
+		<logger level="INFO" doc:name="Update FlightPlan" doc:id="7e71c6c4-f2e3-4f51-8448-3937b75bc7e0" message='#["Updating Flight Plan"]'/>
+		<redis:del doc:name="Delete Cache Value" doc:id="7557b74e-ba05-4909-9490-f82835c26957" config-ref="Redis_Cache" key="#[vars.reservationID]" />
+		<logger level="INFO" doc:name="After Updating FlightPlan" doc:id="0ce9fa40-759d-46d8-9005-c8c0ad26b245" message='#["...After Updating FlightPlan (" ++ vars.reservationID ++ ")."]'/>
+		<ee:transform doc:name="Construct 'Successful' Response" doc:id="836a3956-e90b-4a40-8dc5-0d2a4974096e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  name: "Passenger Reservations System API",
+  status: "OK",
+  statusCode: "200",
+  description: "FlightPlan (" ++ vars.reservationID ++ ") successfully updated.",
+  transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+  timestamp: 1568052807372
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="DEL-invalidate-cache-redisFlow" doc:id="b4175457-1f37-4a74-b87e-08224eb85066" >
+		<ee:transform doc:name="Construct 'Not Implemented' Response" doc:id="14ad7535-2991-4642-a5f0-5d1fb9a5f54b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  name: "Passenger Reservations System API",
+  status: "Not Implemented",
+  statusCode: "501",
+  description: "Operation not implemented",
+  transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+  timestamp: 1568052807372
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+501]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</flow>
+	<flow name="DEL-remove-cache-value-redisFlow" doc:id="173a4396-6337-4c4f-b07f-c95495564fca" >
+		<logger level="INFO" doc:name="Before Removing Cache Value" doc:id="756aa5d0-c3aa-4f94-9f06-a9ea7369d500" message='#["Before Removing Cache Value (" ++ vars.cacheKey ++ ")..."]'/>
+		<redis:del doc:name="Del" doc:id="cbbd151c-5cae-4ebc-80c3-70744eb56aed" config-ref="Redis_Cache" key="#[vars.cacheKey]" />
+		<logger level="INFO" doc:name="After Removing Cache Value" doc:id="4b30a802-0310-4575-9bca-ffc041c15ec2" message='#["...After Removing Cache Value (" ++ vars.cacheKey ++ ")."]'/>
+		<ee:transform doc:name="Construct 'Successful' Response" doc:id="6bc0d88f-a202-4798-903e-b2af3b12393f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  name: "Passenger Reservations System API",
+  status: "Accepted",
+  statusCode: "202",
+  description: "Cache value (" ++ vars.cacheKey ++ ") successfully removed.",
+  transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+  timestamp: 1568052807372
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

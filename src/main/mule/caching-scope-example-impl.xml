@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:redis="http://www.mulesoft.org/schema/mule/redis"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+	http://www.mulesoft.org/schema/mule/ee/core
+	http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+	http://www.mulesoft.org/schema/mule/core
+	http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	http://www.mulesoft.org/schema/mule/redis
+	http://www.mulesoft.org/schema/mule/redis/current/mule-redis.xsd
+	http://www.mulesoft.org/schema/mule/os
+	http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+	http://www.mulesoft.org/schema/mule/http
+	http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<os:object-store name="Object_store"
+		config-ref="ObjectStore_Config_Redis"
+		maxEntries="100"
+		entryTtl="300"
+		expirationInterval="60"
+		expirationIntervalUnit="SECONDS"/>
+	<os:config name="ObjectStore_Config_Redis">
+       	<redis:nonclustered-connection host="${redis.host}" port="${redis.port}" connectionTimeout="${redis.connection.timeout}" entryTTL="${redis.entryTTL}" />
+    </os:config>
+	<ee:object-store-caching-strategy name="Caching_Strategy" doc:name="Caching Strategy" doc:id="0f22b67c-ad9c-42de-b77a-fac99eae38ad" objectStore="Object_store" keyGenerationExpression="#[vars.reservationID]"/>
+	<configuration-properties doc:name="Configuration properties" doc:id="2d911930-a69c-4572-bf96-9c496649b5c9" file="example-properties.yaml" />
+	<flow name="GET-reservation-flightPlanFlow" doc:id="7115e862-43dd-4e98-8453-84379716aa27" >
+		<logger level="INFO" doc:name="Before Cache Scope" doc:id="aa637b31-d28d-4188-b92a-89b3ed7895b8" message='#["Before Cache Scope...."]'/>
+		<ee:cache doc:name="FlightPlan Cache Scope" doc:id="0f294d60-39ee-488f-92ff-b4d2e2d75866" cachingStrategy-ref="Caching_Strategy">
+			<flow-ref doc:name="Lookup FlightPlan" doc:id="268e5f15-3608-4bda-9ee0-18ff7dd3887d" name="lookup-reservation-flightPlanSub_Flow"/>
+		</ee:cache>
+		<logger level="INFO" doc:name="After Cache Scope" doc:id="421994ed-fce3-4351-aa28-e1c24c058d36" message='#["...After Cache Scope"]'/>
+		<ee:transform doc:name="Construct 'Successful' Response" doc:id="acb58f57-89ce-4687-9b50-8b13e0858fb4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  apiStatus: {
+    name: "Passenger Reservations System API",
+    status: "OK",
+    statusCode: "200",
+    description: "Flights successfully retrieved.",
+    transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+    timestamp: 1568052807372
+  },
+  flights: payload
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<sub-flow name="lookup-reservation-flightPlanSub_Flow" doc:id="5be535c8-496a-4630-abd6-7f632d914f63" >
+		<logger level="INFO" doc:name="Before FlightPlan Lookup" doc:id="c6a4399f-8bb8-4c5d-877c-ca9b0f8b42fa" message='#["FlightPlan not Cached. Before Looking Up Flights...."]'/>
+		<logger level="INFO" doc:name="Log ReservationID" doc:id="ef86d81b-30e6-4778-84de-becc34be6596" message='#["Reservation ID: " ++ vars.reservationID]'/>
+		<ee:transform doc:name="isEven" doc:id="3559eb2d-86f4-430d-af56-297ca1f977c5" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="isEven" ><![CDATA[%dw 2.0
+output application/java
+---
+if ((vars.reservationID as Number mod 2) == 0)
+  true
+else
+  false]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Even/Odd Status" doc:id="7cfa4ce9-5325-4218-940a-dd55b6b81ac4" message='#["isEven: " ++ vars.isEven]'/>
+		<choice doc:name="Even/Odd?" doc:id="f632a95d-4ee5-4c9c-be5f-90ea9c1c573c" >
+			<when expression="#[vars.isEven]">
+				<ee:transform doc:name="Lookup Reservation FlightPlan #1" doc:id="7db79ac0-f846-4912-a933-7cbbecf92c06">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+[
+    {
+      aircraft: {
+        registrationNumber: "495120-DL"
+      },
+      leg: {
+        fltNumber: "342",
+        rotation: {
+          airline: {
+            airlineName: "Southzest"
+          },
+          aircraftModel: {
+            manufacturer: "Boeing",
+            modelNumber: "737"
+          },
+          frequency: "MTWRFSU",
+          startEffectiveDate: 1548979200000,
+          endEffectiveDate: 1551398400000,
+          legs: [
+            "342", 
+            "732", 
+            "456", 
+            "109"
+          ]
+        },
+        origin: {
+          airportCode: "LAX",
+          airportName: "Los Angeles International Airport"
+        },
+        destination: {
+          airportCode: "DFW",
+          airportName: "Dallas/Fort Worth International Airport"
+        },
+        scheduledDepartureTime: 1551369600000,
+        scheduledArrivalTime: 1551380400000
+      },
+      actualDepartureTime: 1551370301090,
+      actualArrivalTime: 1551379758060
+    }, 
+    {
+      aircraft: {
+        registrationNumber: "849388-CL"
+      },
+      leg: {
+        fltNumber: "123",
+        rotation: {
+          airline: {
+            airlineName: "Southzest"
+          },
+          aircraftModel: {
+            manufacturer: "Boeing",
+            modelNumber: "737"
+          },
+          frequency: "MTWRFSU",
+          startEffectiveDate: 1548979200000,
+          endEffectiveDate: 1551398400000,
+          legs: [
+            "898", 
+            "987", 
+            "872", 
+            "459", 
+            "123"
+          ]
+        },
+        origin: {
+          airportCode: "DFW",
+          airportName: "Dallas/Fort Worth International Airport"
+        },
+        destination: {
+          airportCode: "DCA",
+          airportName: "Ronald Reagan Washington National Airport"
+        },
+        scheduledDepartureTime: 1551382800000,
+        scheduledArrivalTime: 1551395700000
+      },
+      actualDepartureTime: 1551383109000,
+      actualArrivalTime: 1551395778060
+    }
+ ]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Lookup Reservation FlightPlan #2" doc:id="d4f8e708-5483-49de-8eee-875c2c9495cd" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[
+    {
+      aircraft: {
+        registrationNumber: "120495-DL"
+      },
+      leg: {
+        fltNumber: "878",
+        rotation: {
+          airline: {
+            airlineName: "Southzest"
+          },
+          aircraftModel: {
+            manufacturer: "Boeing",
+            modelNumber: "737"
+          },
+          frequency: "MTWRFSU",
+          startEffectiveDate: 1548979200000,
+          endEffectiveDate: 1551398400000,
+          legs: [
+            "878", 
+            "497", 
+            "121"
+          ]
+        },
+        origin: {
+          airportCode: "PDX",
+          airportName: "Portland International Airport"
+        },
+        destination: {
+          airportCode: "ORD",
+          airportName: "Chicago O'Hare International Airport"
+        },
+        scheduledDepartureTime: 1551369600000,
+        scheduledArrivalTime: 1551380400000
+      },
+      actualDepartureTime: 1551370301090,
+      actualArrivalTime: 1551379758060
+    }, 
+    {
+      aircraft: {
+        registrationNumber: "388849-CL"
+      },
+      leg: {
+        fltNumber: "677",
+        rotation: {
+          airline: {
+            airlineName: "Southzest"
+          },
+          aircraftModel: {
+            manufacturer: "Boeing",
+            modelNumber: "737"
+          },
+          frequency: "MTWRFSU",
+          startEffectiveDate: 1548979200000,
+          endEffectiveDate: 1551398400000,
+          legs: [
+            "432", 
+            "261", 
+            "677", 
+            "453", 
+            "123"
+          ]
+        },
+        origin: {
+          airportCode: "ORD",
+          airportName: "Chicago O'Hare International Airport"
+        },
+        destination: {
+          airportCode: "JFK",
+          airportName: "John F. Kennedy International Airport"
+        },
+        scheduledDepartureTime: 1551382800000,
+        scheduledArrivalTime: 1551395700000
+      },
+      actualDepartureTime: 1551383109000,
+      actualArrivalTime: 1551395778060
+    }
+]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="After FlightPlan Lookup" doc:id="53f79e1e-c5c3-4cc6-9dbb-edc8fa1b7318" message='#["FlightPlan not Cached. ...After Looking Up Flights."]'/>
+	</sub-flow>
+		<flow name="PUT-reservation-flightPlanFlow" doc:id="cf84bdb2-356c-4da5-981a-c2de75c13940" >
+		<logger level="INFO" doc:name="Before Updating FlightPlan" doc:id="a367ea07-264f-4cc1-bc7b-862f0fbbc445" message='#["Before Updating FlightPlan (" ++ vars.reservationID ++ ")..."]'/>
+		<logger level="INFO" doc:name="Updating FlightPlan" doc:id="f91a46a2-4594-443c-b2e8-d6ca18d38371" message='#["Updating Flight Plan"]'/>
+		<os:remove doc:name="Remove Cache Value" doc:id="af317865-f0bf-4f22-9615-9a0314136ad3" key="#[vars.reservationID]" objectStore="Object_store"/>
+		<logger level="INFO" doc:name="After Updating FlightPlan" doc:id="2d0d22d7-70fa-4035-9cb7-c41f9ec989cd" message='#["...After Updating FlightPlan (" ++ vars.reservationID ++ ")."]'/>
+		<ee:transform doc:name="Construct 'Successful' Response" doc:id="fcb3fd41-d5d3-4561-906b-9181dbc5ccb5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  name: "Passenger Reservations System API",
+  status: "OK",
+  statusCode: "200",
+  description: "FlightPlan (" ++ vars.reservationID ++ ") successfully updated.",
+  transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+  timestamp: 1568052807372
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="false" doc:name="On Error Continue" doc:id="63df8c40-2675-4dad-a0a5-c8d3ec40e04d" type='OS:KEY_NOT_FOUND'>
+				<ee:transform doc:name="Construct 'Not Found' Response" doc:id="cad71753-8d85-468f-b054-2bb3370d5c71" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  name: "Passenger Reservations System API",
+  status: "Not Found",
+  statusCode: "404",
+  description: "Cache value (" ++ vars.cacheKey ++ ") not found.",
+  transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+  timestamp: 1568052807372
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+404]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+	<flow name="DEL-invalidate-cacheFlow" doc:id="3ada2abc-c382-42d7-ae4b-9336fe9cecfe" >
+		<logger level="INFO" doc:name="Before Clearing Cache" doc:id="ca3bd0bb-fd22-4ed2-87cb-4469fa812f9c" message='#["Before Clearing Cache..."]'/>
+		<ee:invalidate-cache doc:name="Invalidate Cache" doc:id="f6511618-b345-4745-93e2-d56523c2e24d" cachingStrategy-ref="Caching_Strategy"/>
+		<logger level="INFO" doc:name="After Clearing Cache" doc:id="e774fdae-29a2-435a-85a0-b609ce90115e" message='#["...After Clearing Cache"]'/>
+		<ee:transform doc:name="Construct 'Successful' Response" doc:id="6b015d8c-8f2a-4542-9fda-5908b209b91e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  name: "Passenger Reservations System API",
+  status: "Accepted",
+  statusCode: "202",
+  description: "Cache scope successfully cleared.",
+  transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+  timestamp: 1568052807372
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="DEL-remove-cache-valueFlow" doc:id="8aa6a053-683c-459f-b63d-c4a2dc52ef0c" >
+		<logger level="INFO" doc:name="Before Removing Cache Value" doc:id="2e03a4d1-f16f-4e0f-8ad7-19ee899d6544" message='#["Before Removing Cache Value (" ++ vars.cacheKey ++ ")..."]'/>
+		<os:remove doc:name="Remove" doc:id="5af411eb-6457-47ef-8d1a-c7e129fcda5e" key="#[vars.cacheKey]" objectStore="Object_store"/>
+		<logger level="INFO" doc:name="After Removing Cache Value" doc:id="e5ee6ddd-5bcd-43af-aed1-3031239be24d" message='#["...After Removing Cache Value (" ++ vars.cacheKey ++ ")."]'/>
+		<ee:transform doc:name="Construct 'Successful' Response" doc:id="c7abc43f-cccd-44b4-9487-98215f7e1705" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  name: "Passenger Reservations System API",
+  status: "Accepted",
+  statusCode: "202",
+  description: "Cache value (" ++ vars.cacheKey ++ ") successfully removed.",
+  transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+  timestamp: 1568052807372
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="false" doc:name="On Error Continue" doc:id="bf687173-dfeb-456d-8b72-4204121e0c83" type='OS:KEY_NOT_FOUND'>
+				<ee:transform doc:name="Construct 'Not Found' Response" doc:id="bae2e688-b3d0-45b1-b88f-ec5fcff36c7a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  name: "Passenger Reservations System API",
+  status: "Not Found",
+  statusCode: "404",
+  description: "Cache value (" ++ vars.cacheKey ++ ") not found.",
+  transactionId: "1c7968f0-3102-11eb-adc1-0242ac120002",
+  timestamp: 1568052807372
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+404]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>
