@@ -1,4 +1,4 @@
-# Caching Scope Example w/Redis
+# Redis Caching Scope Example
 
 This example provides two separate caching implementations for Mule-based APIs, both using Redis. The primary 
 purpose of caching is to increase data retrieval performance by reducing the need to access the underlying 
