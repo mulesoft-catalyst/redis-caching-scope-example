@@ -129,10 +129,10 @@ output application/json
                 <ee:set-variable variableName="reservationID">attributes.uriParams.'reservationID'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref doc:name="Get Flight Plan" doc:id="2b198db3-029d-465c-88f3-3119f7268b7b" name="GET-reservation-flightPlan-redisFlow" />
+        <flow-ref doc:name="Get Flight Plan" doc:id="2b198db3-029d-465c-88f3-3119f7268b7b" name="GET-reservation-flightPlanFlow" />
     </flow>
     <flow name="delete:\clear:caching-scope-example-config">
-        <flow-ref doc:name="Invalidate Cache Flow" doc:id="015ae04f-0815-42f6-9572-19da3d942e3e" name="DEL-invalidate-cache-redisFlow" />
+        <flow-ref doc:name="Invalidate Cache Flow" doc:id="015ae04f-0815-42f6-9572-19da3d942e3e" name="DEL-invalidate-cacheFlow" />
     </flow>
     <flow name="delete:\clear\(cacheKey):caching-scope-example-config">
         <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" doc:name="Capture Cache Key">
@@ -140,7 +140,7 @@ output application/json
                 <ee:set-variable variableName="cacheKey">attributes.uriParams.'cacheKey'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref doc:name="Remove Cache Value by Key" doc:id="ac7ae9cb-57fd-4ce5-b34a-64b029df211a" name="DEL-remove-cache-value-redisFlow" />
+        <flow-ref doc:name="Remove Cache Value by Key" doc:id="ac7ae9cb-57fd-4ce5-b34a-64b029df211a" name="DEL-remove-cache-valueFlow" />
     </flow>
     <flow name="put:\reservations\(reservationID)\flights:caching-scope-example-config">
         <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" doc:name="Capture Reservation ID">
@@ -148,6 +148,6 @@ output application/json
                 <ee:set-variable variableName="reservationID">attributes.uriParams.'reservationID'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-		<flow-ref doc:name="Update FlightPlan" doc:id="5b9a8e0c-d8eb-4b2a-b7cf-c7ad010d9a16" name="PUT-reservation-flightPlan-redisFlow"/>
+		<flow-ref doc:name="Update FlightPlan" doc:id="5b9a8e0c-d8eb-4b2a-b7cf-c7ad010d9a16" name="PUT-reservation-flightPlanFlow"/>
     </flow>
 </mule>
