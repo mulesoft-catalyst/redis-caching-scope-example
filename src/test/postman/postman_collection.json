@@ -1,0 +1,167 @@
+{
+	"info": {
+		"_postman_id": "b2a34280-4f78-4e81-9d9c-7e34debcb9ab",
+		"name": "API Pattern: Caching",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Retrieve Reservation FlightPlan",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "MULE-CORRELATION-ID",
+						"value": "123456789",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/cache/reservations/12253/flights?client_id=1234567890&client_secret=9876543210",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"cache",
+						"reservations",
+						"12253",
+						"flights"
+					],
+					"query": [
+						{
+							"key": "client_id",
+							"value": "1234567890"
+						},
+						{
+							"key": "client_secret",
+							"value": "9876543210"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Retrieve Reservation FlightPlan Copy",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "MULE-CORRELATION-ID",
+						"value": "123456789",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n        {\n            \"aircraft\": {\n                \"registrationNumber\": \"120495-DL\"\n            },\n            \"leg\": {\n                \"fltNumber\": \"878\",\n                \"rotation\": {\n                    \"airline\": {\n                        \"airlineName\": \"Southzest\"\n                    },\n                    \"aircraftModel\": {\n                        \"manufacturer\": \"Boeing\",\n                        \"modelNumber\": \"737\"\n                    },\n                    \"frequency\": \"MTWRFSU\",\n                    \"startEffectiveDate\": 1548979200000,\n                    \"endEffectiveDate\": 1551398400000,\n                    \"legs\": [\n                        \"878\",\n                        \"497\",\n                        \"121\"\n                    ]\n                },\n                \"origin\": {\n                    \"airportCode\": \"PDX\",\n                    \"airportName\": \"Portland International Airport\"\n                },\n                \"destination\": {\n                    \"airportCode\": \"ORD\",\n                    \"airportName\": \"Chicago O'Hare International Airport\"\n                },\n                \"scheduledDepartureTime\": 1551369600000,\n                \"scheduledArrivalTime\": 1551380400000\n            },\n            \"actualDepartureTime\": 1551370301090,\n            \"actualArrivalTime\": 1551379758060\n        },\n        {\n            \"aircraft\": {\n                \"registrationNumber\": \"388849-CL\"\n            },\n            \"leg\": {\n                \"fltNumber\": \"677\",\n                \"rotation\": {\n                    \"airline\": {\n                        \"airlineName\": \"Southzest\"\n                    },\n                    \"aircraftModel\": {\n                        \"manufacturer\": \"Boeing\",\n                        \"modelNumber\": \"737\"\n                    },\n                    \"frequency\": \"MTWRFSU\",\n                    \"startEffectiveDate\": 1548979200000,\n                    \"endEffectiveDate\": 1551398400000,\n                    \"legs\": [\n                        \"432\",\n                        \"261\",\n                        \"677\",\n                        \"453\",\n                        \"123\"\n                    ]\n                },\n                \"origin\": {\n                    \"airportCode\": \"ORD\",\n                    \"airportName\": \"Chicago O'Hare International Airport\"\n                },\n                \"destination\": {\n                    \"airportCode\": \"JFK\",\n                    \"airportName\": \"John F. Kennedy International Airport\"\n                },\n                \"scheduledDepartureTime\": 1551382800000,\n                \"scheduledArrivalTime\": 1551395700000\n            },\n            \"actualDepartureTime\": 1551383109000,\n            \"actualArrivalTime\": 1551395778060\n        }\n    ]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8081/cache/reservations/12253/flights?client_id=1234567890&client_secret=9876543210",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"cache",
+						"reservations",
+						"12253",
+						"flights"
+					],
+					"query": [
+						{
+							"key": "client_id",
+							"value": "1234567890"
+						},
+						{
+							"key": "client_secret",
+							"value": "9876543210"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Invalidate Cache",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "MULE-CORRELATION-ID",
+						"type": "text",
+						"value": "123456789"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/cache/clear?client_id=1234567890&client_secret=9876543210",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"cache",
+						"clear"
+					],
+					"query": [
+						{
+							"key": "client_id",
+							"value": "1234567890"
+						},
+						{
+							"key": "client_secret",
+							"value": "9876543210"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Remove Cache Value",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "MULE-CORRELATION-ID",
+						"type": "text",
+						"value": "123456789"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/cache/clear/12253?client_id=1234567890&client_secret=9876543210",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"cache",
+						"clear",
+						"12253"
+					],
+					"query": [
+						{
+							"key": "client_id",
+							"value": "1234567890"
+						},
+						{
+							"key": "client_secret",
+							"value": "9876543210"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
